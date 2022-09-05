@@ -1,82 +1,83 @@
-const oauth = require('oauth');
-const _ = require('lodash');
+const oauth = require("oauth");
+const _ = require("lodash");
 const js2xmlparser = require("js2xmlparser");
 
-class tradekingApi {
+class allyInvestApi {
   constructor(options) {
     const isValidCredentials = this._validateCredentials(options);
     if (!isValidCredentials) {
-      this._throwError('Invalid Credentials');
+      this._throwError("Invalid Credentials");
       return false;
     }
 
     this.options = options;
-    this.apiEndPoint = 'https://api.tradeking.com/v1';
-    this.responseType = 'json';
-    this.tradekingClient = new oauth.OAuth(
-      'https://developers.tradeking.com/oauth/request_token',
-      'https://developers.tradeking.com/oauth/access_token',
+    this.apiEndPoint = "https://devapi.invest.ally.com/v1";
+    this.responseType = "json";
+    this.allyInvestClient = new oauth.OAuth(
+      "https://devapi.invest.ally.com/oauth/request_token",
+      "https://devapi.invest.ally.com/oauth/access_token",
       this.options.consumerKey,
       this.options.consumerSecret,
-      '1.0',
+      "1.0",
       this.options.callback,
-      'HMAC-SHA1'
+      "HMAC-SHA1"
     );
   }
 
   _validateCredentials(credentials) {
     if (!credentials) return false;
 
-    const {
-      consumerKey,
-      consumerSecret,
-      oauthToken,
-      oauthTokenSecret,
-    } = credentials;
+    const { consumerKey, consumerSecret, oauthToken, oauthTokenSecret } =
+      credentials;
 
     return consumerKey && consumerSecret && oauthToken && oauthTokenSecret;
   }
 
-  _getApiEndPoint(endpoint, queryParam, stream = false, options = { useGet: true, postBody: null }) {
+  _getApiEndPoint(
+    endpoint,
+    queryParam,
+    stream = false,
+    options = { useGet: true, postBody: null }
+  ) {
     let url = `${this.apiEndPoint}/${endpoint}.${this.responseType}`;
     if (queryParam) {
       url = `${this.apiEndPoint}/${endpoint}.${this.responseType}?${queryParam}`;
-    } 
+    }
 
     if (stream) {
-      url = url.replace(/api/i, 'stream');
+      url = url.replace(/api/i, "stream");
     }
 
     return new Promise((resolve, reject) => {
       if (options.useGet) {
-        this.tradekingClient.get(
+        this.allyInvestClient.get(
           url,
           this.options.oauthToken,
           this.options.oauthTokenSecret,
           (error, data, response) => {
             if (error) reject(error);
-            if (this.responseType === 'xml') return resolve(data);
+            if (this.responseType === "xml") return resolve(data);
             return resolve(JSON.parse(data));
           }
         );
       } else {
-        this.tradekingClient.post(
+        this.allyInvestClient.post(
           url,
           this.options.oauthToken,
           this.options.oauthTokenSecret,
           options.postBody,
           (error, data, response) => {
             if (error) reject(error);
-            if (this.responseType === 'xml') return resolve(data);
+            if (this.responseType === "xml") return resolve(data);
             return resolve(JSON.parse(data));
           }
         );
-      } 
+      }
     });
   }
 
   _validateId(id) {
-    if (!id) this._throwError('You must pass an account id');
+    if (!id) this._throwError("You must pass an account id");
   }
 
   _throwError(message) {
@@ -92,14 +93,15 @@ class tradekingApi {
       this._throwError(`You must pass a value for ${fieldName}`);
     }
 
-    if (!_.isString(field) && !_.isArray(field)) this._throwError(`Invalid type ${typeof field} for ${fieldName}`);
+    if (!_.isString(field) && !_.isArray(field))
+      this._throwError(`Invalid type ${typeof field} for ${fieldName}`);
   }
 
   _buildFxml(body) {
-    const options = { declaration: { include: false }};
+    const options = { declaration: { include: false } };
     const fixmlRoot = {
-      '@': {
-        xmlns:"http://www.fixprotocol.org/FIXML-5-0-SP2",
+      "@": {
+        xmlns: "http://www.fixprotocol.org/FIXML-5-0-SP2",
       },
       body,
     };
@@ -107,10 +109,10 @@ class tradekingApi {
   }
 
   _trimQueryStrings(strings, ...values) {
-    let queryString = '';
+    let queryString = "";
     _(strings).forEach((string, key) => {
       if (!values[key]) return false;
-      queryString += queryString + string  + values[key];
+      queryString += queryString + string + values[key];
     });
 
     return queryString;
@@ -118,11 +120,17 @@ class tradekingApi {
 
   setResponseType(type) {
     switch (type) {
-      case 'json': this.responseType = type; break;
-      case 'xml': this.responseType = type; break;
-      default :
-        console.log('You passed an invalid response type, default will be used');
-        this.responseType = 'json';
+      case "json":
+        this.responseType = type;
+        break;
+      case "xml":
+        this.responseType = type;
+        break;
+      default:
+        console.log(
+          "You passed an invalid response type, default will be used"
+        );
+        this.responseType = "json";
         break;
     }
   }
@@ -133,49 +141,53 @@ class tradekingApi {
 
   accounts(id) {
     if (id) return this.getApiEndPoint(`accounts/${id}`);
-    return this._getApiEndPoint('accounts');
+    return this._getApiEndPoint("accounts");
   }
 
   accountBalances() {
-    return this._getApiEndPoint('accounts/balances');
+    return this._getApiEndPoint("accounts/balances");
   }
 
   accountOrders(id) {
     this._validateId(id);
     return this._getApiEndPoint(`accounts/${id}/orders`);
   }
-  
+
   postAccountOrder(id, order) {
-   this._validateId(id);
-   const postBody = this._buildFxml(order);
-   return this._getApiEndPoint(`accounts/${id}/orders`, null, null, { useGet: false, postBody });
+    this._validateId(id);
+    const postBody = this._buildFxml(order);
+    return this._getApiEndPoint(`accounts/${id}/orders`, null, null, {
+      useGet: false,
+      postBody,
+    });
   }
-  
+
   balanceForAccount(id) {
     this._validateId(id);
     return this._getApiEndPoint(`accounts/${id}/balances`);
   }
 
-  historyForAccount(id, range = 'all', transaction = 'all') {
+  historyForAccount(id, range = "all", transaction = "all") {
     this._validateId(id);
     const validRangeTypes = [
-      'all',
-      'today',
-      'current_week',
-      'current_month',
-      'last_month'
+      "all",
+      "today",
+      "current_week",
+      "current_month",
+      "last_month",
     ];
-    const validTransactionTypes = [
-      'all',
-      'bookkeeping',
-      'trade'
-    ];
-    if (range && !validRangeTypes.includes(range)) this._throwError('Invalid range passed');
-    if (transactions && !validTransactionTypes.includes(transaction)) this._throwError('Invalid transaction passed');
-    
-    return this._getApiEndPoint(`accounts/${id}/history`, this._trimQueryStrings`range=${range}&transactions=${transactions}`);
+    const validTransactionTypes = ["all", "bookkeeping", "trade"];
+    if (range && !validRangeTypes.includes(range))
+      this._throwError("Invalid range passed");
+    if (transactions && !validTransactionTypes.includes(transaction))
+      this._throwError("Invalid transaction passed");
+
+    return this._getApiEndPoint(
+      `accounts/${id}/history`,
+      this._trimQueryStrings`range=${range}&transactions=${transactions}`
+    );
   }
-  
+
   holdingsForAccount(id) {
     this._validateId(id);
     return this._getApiEndPoint(`accounts/${id}/holdings`);
@@ -185,30 +197,39 @@ class tradekingApi {
     return this._getApiEndPoint(`market/clock`);
   }
 
-  marketTopLists({ listType, exchange = 'N' }) {
+  marketTopLists({ listType, exchange = "N" }) {
     const validListTypes = [
-      'toplosers',
-      'toppctlosers',
-      'topvolume',
-      'topactive',
-      'topgainers',
-      'toppctgainers'
+      "toplosers",
+      "toppctlosers",
+      "topvolume",
+      "topactive",
+      "topgainers",
+      "toppctgainers",
     ];
-    const validExchanges = ['A','N','Q','U','V'];
+    const validExchanges = ["A", "N", "Q", "U", "V"];
     const upperCaseExchange = exchange.toUpperCase();
-    if (!validListTypes.includes(listType)) this._throwError('Invalid listType supplied');
-    if (!validExchanges.includes(upperCaseExchange)) this._throwError('Invalid exchange supplied');
+    if (!validListTypes.includes(listType))
+      this._throwError("Invalid listType supplied");
+    if (!validExchanges.includes(upperCaseExchange))
+      this._throwError("Invalid exchange supplied");
 
-    return this._getApiEndPoint(`market/toplists/${listType}`,`exchange=${upperCaseExchange}`);
+    return this._getApiEndPoint(
+      `market/toplists/${listType}`,
+      `exchange=${upperCaseExchange}`
+    );
   }
 
   marketNewsSearch({ symbols, maxhits = 10, startdate, enddate }) {
-    this._fieldIsArrayOrSingle({ field: symbols, fieldName: 'symbols' });
+    this._fieldIsArrayOrSingle({ field: symbols, fieldName: "symbols" });
     let formatedSymbols = symbols;
     if (_.isArray(symbols)) {
-      formatedSymbols = formatedSymbols.join(',');
+      formatedSymbols = formatedSymbols.join(",");
     }
-    return this._getApiEndPoint(`market/news/search`, this._trimQueryStrings`symbols=${symbols}&maxhits=${maxhits}&startdate=${startdate}&enddate=${enddate}`);
+    return this._getApiEndPoint(
+      `market/news/search`,
+      this
+        ._trimQueryStrings`symbols=${symbols}&maxhits=${maxhits}&startdate=${startdate}&enddate=${enddate}`
+    );
   }
 
   memberProfile() {
@@ -216,19 +237,31 @@ class tradekingApi {
   }
 
   getMarketQuotesForSymbols({ symbols, fids, stream = false }) {
-    this._fieldIsArrayOrSingle({ field: symbols, fieldName: 'symbols'});
-    if (fids) this._fieldIsArrayOrSingle({ field: fids, fieldName: 'fids'});
+    this._fieldIsArrayOrSingle({ field: symbols, fieldName: "symbols" });
+    if (fids) this._fieldIsArrayOrSingle({ field: fids, fieldName: "fids" });
     let formatedSymbols = symbols;
     let formatedFids = fids;
     if (_.isArray(symbols)) {
-      formatedSymbols = formatedSymbols.join(',');
+      formatedSymbols = formatedSymbols.join(",");
     }
     if (_.isArray(fids)) {
-      formatedFids = formatedFids.join(',');
+      formatedFids = formatedFids.join(",");
     }
-    console.log(formatedSymbols, this._trimQueryStrings`symbols=${formatedSymbols}&fids${formatedFids}`)
-    if (stream) return this._getApiEndPoint(`market/quotes`, this._trimQueryStrings`symbols=${formatedSymbols}&fids=${formatedFids}`, stream);
-    return this._getApiEndPoint(`market/ext/quotes`, this._trimQueryStrings`symbols=${formatedSymbols}&fids${formatedFids}`, stream);
+    console.log(
+      formatedSymbols,
+      this._trimQueryStrings`symbols=${formatedSymbols}&fids${formatedFids}`
+    );
+    if (stream)
+      return this._getApiEndPoint(
+        `market/quotes`,
+        this._trimQueryStrings`symbols=${formatedSymbols}&fids=${formatedFids}`,
+        stream
+      );
+    return this._getApiEndPoint(
+      `market/ext/quotes`,
+      this._trimQueryStrings`symbols=${formatedSymbols}&fids${formatedFids}`,
+      stream
+    );
   }
 
   streamMarketQuotesForSymbols(options) {
@@ -241,19 +274,25 @@ class tradekingApi {
   }
 
   watchLists(watchListName) {
-    if (watchListName) return this._getApiEndPoint(`watchlists/${watchListName}`);
+    if (watchListName)
+      return this._getApiEndPoint(`watchlists/${watchListName}`);
     return this._getApiEndPoint(`watchlists`);
   }
 
   newWatchList(watchListName, symbols) {
-    this._fieldIsArrayOrSingle({ field: symbols, fieldName: 'symbols'});
-    if (!watchListName) this._throwError('You must pass a watch list name');
+    this._fieldIsArrayOrSingle({ field: symbols, fieldName: "symbols" });
+    if (!watchListName) this._throwError("You must pass a watch list name");
     let formatedSymbols = symbols;
     if (_.isArray(symbols)) {
-      formatedSymbols = formatedSymbols.join(',');
+      formatedSymbols = formatedSymbols.join(",");
     }
-    return this._getApiEndPoint(`watchlists`, `id=${watchListName}&symbols=${formatedSymbols}`, null, { useGet: false, postBody: null });
+    return this._getApiEndPoint(
+      `watchlists`,
+      `id=${watchListName}&symbols=${formatedSymbols}`,
+      null,
+      { useGet: false, postBody: null }
+    );
   }
 }
 
-module.exports =  tradekingApi;
+module.exports = allyInvestApi;
