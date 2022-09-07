@@ -1,7 +1,7 @@
 {
   "name": "ally-invest-api",
   "version": "0.1.0",
-  "description": "Wrapper for Ally Invest API (formerly TradeKing)",
+  "description": "Wrapper for Ally Invest API",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -14,13 +14,12 @@
     "ally",
     "stock",
     "invest",
-    "tradeking",
     "api"
   ],
-  "author": "Charlton Roberts <charltonroberts@gmail.com>",
+  "author": "Jace Whitmer <me@jacewhitmer.com>",
   "contributors": [
     "codeNgamer",
-    "jacewhitmer"
+    "charltoons"
   ],
   "license": "MIT",
   "bugs": {
